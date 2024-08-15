@@ -163,4 +163,32 @@ async function update_user_password(user_update_data: { password: string, update
 }
 
 
-export { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user_password };
+/**
+ * 
+ * @name : get_user_permission
+ * @Desc : For getting user's permission
+ * 
+ */
+
+
+async function get_user_permission(): Promise<RowDataPacket[]> {
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM permissions');
+    return rows;
+}
+
+
+/**
+ * 
+ * @name : insert_user_permission
+ * @Desc : For inserting new permission
+ * 
+ */
+
+
+async function insert_user_permission(new_permission: { route: string, user_type: string, method_type: string }): Promise<number> {
+    const [rows] = await pool.query<ResultSetHeader>('INSERT INTO permissions SET ?', new_permission);
+    return rows.insertId;
+}
+
+
+export { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user_password, get_user_permission, insert_user_permission };

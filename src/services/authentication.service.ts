@@ -25,8 +25,18 @@ const authenticate_request = async_handler(async (req: Request, res: Response, n
         let is_token_exists = await get_access_token_redis(user_id, token); // Checking access token exists or not in db
         if (!is_token_exists) return res.status(401).json(new ApiError(401, 'Token is blocked'));   // If we want to block the access token we will delete it from redis
 
-        let permissions = await get_user_permissions_redis(user_type);   //  Getting users permissions from redis
-        if(permissions) req.body.user_permissions = permissions;    //  If found permissions then will set it in {req.body}
+        // Extract the URL path without query parameters
+        const url_path = req.path; // This automatically excludes query parameters
+
+        // Split the path into segments
+        const segments = url_path.split('/').filter(segment => segment.length > 0);
+        
+        // Get the last segment
+        const last_segment = segments.length > 0 ? segments[segments.length - 1] : '';
+        const methodType = req.method;
+
+        let permissions = await get_user_permissions_redis(user_type, `/${last_segment}`, methodType.toUpperCase());   //  Getting users permissions from redis
+        if(!permissions) return res.status(401).json(new ApiError(401, `You don't have permission for the feature !!`));
         
         next();
     }

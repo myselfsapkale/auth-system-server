@@ -124,8 +124,49 @@ async function delete_multiple_from_redis(path: string): Promise<void> {
  */
 
 
-async function get_user_permissions_redis(user_type: string): Promise<string | null> {
-    return await redis_cli.get(`permissions:${user_type}`);
+async function get_user_permissions_redis(user_type: string, api_route: string, method_type: string): Promise<number | null> {
+    return await redis_cli.sismember(`permissions:${user_type}:${method_type}`, api_route);
 }
 
-export {set_access_token_redis, get_access_token_redis, delete_from_redis, set_forgot_pass_otp_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis, get_user_permissions_redis, delete_multiple_from_redis  };
+
+/**
+ * 
+ * @name : set_user_permissions_redis
+ * @Desc : For setting user permissions in redis db
+ * 
+ */
+
+async function set_user_permissions_redis(permissions: any[]) {
+    // Create an object to hold categorized permissions
+    const categorizedPermissions: any = {
+        'admin': { 'GET': [], 'POST': [], 'PUT': [], 'DELETE': [] },
+        'user': { 'GET': [], 'POST': [], 'PUT': [], 'DELETE': [] }
+    };
+
+    // Categorize permissions
+    for (const perm of permissions) {
+        const { user_type, method_type, route } = perm;
+        const method = method_type.toUpperCase();
+
+        if (categorizedPermissions[user_type] && categorizedPermissions[user_type][method]) {
+            categorizedPermissions[user_type][method].push(route);
+        }
+    }
+
+    // Add permissions to Redis
+    for (const userType in categorizedPermissions) {
+        for (const method in categorizedPermissions[userType]) {
+            const key = `permissions:${userType}:${method}`;
+            const routes = categorizedPermissions[userType][method];
+            
+            // Remove old permissions
+            await redis_cli.del(key);
+            
+            if (routes.length > 0) {
+                await redis_cli.sadd(key, ...routes);
+            }
+        }
+    }
+}
+
+export {set_access_token_redis, get_access_token_redis, delete_from_redis, set_forgot_pass_otp_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis, get_user_permissions_redis, delete_multiple_from_redis, set_user_permissions_redis  };

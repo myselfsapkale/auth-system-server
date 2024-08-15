@@ -3,11 +3,11 @@ import { pool } from '../db/connect_db';
 import { PoolConnection } from 'mysql2/promise';
 import { ApiResponse, ApiError } from '../utils/api_response';
 import { async_handler } from '../utils/async_handler';
-import { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user_password } from '../model/auth.model';
+import { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user_password, insert_user_permission, get_user_permission } from '../model/auth.model';
 import { get_user_details, get_bcrypt_password, generate_token, validate_password, generate_otp, generate_secret, set_auth_cookie } from '../services/auth.service';
 import { get_current_UTC_time, check_all_required_keys_data, get_user_from_token } from '../utils/common_utilites';
 import { send_email_otp } from '../utils/nodemailer_helper';
-import { set_access_token_redis, set_forgot_pass_otp_redis, delete_from_redis, delete_multiple_from_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis } from '../utils/redis_handler';
+import { set_access_token_redis, set_forgot_pass_otp_redis, delete_from_redis, delete_multiple_from_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis, set_user_permissions_redis } from '../utils/redis_handler';
 import { passport } from '../services/sso_login_helper.service';
 import { GoogleAuthUser } from '../interfaces/auth.interface';
 
@@ -55,7 +55,7 @@ const register = async_handler(async (req: Request, res: Response) => {
     await insert_access_token({ access_token: new_access_token, refresh_token_id: new_refresh_token_id, user_id: new_user_id, created_on: current_date_time, updated_on: current_date_time }, connection);    // Here we are setting access token in DB 
 
     await connection.commit();    // Commit transaction
-    await set_access_token_redis(new_user_id, new_access_token);  // Storing access_token in redis for user sessions
+    await set_access_token_redis(new_user_id, new_access_token);  // Storing access_token in redis for user sessions   
     
     return res.status(201).json(new ApiResponse(201, { user_id: new_user_id, user_type: new_user.user_type, refresh_token: new_refresh_token, access_token: new_access_token }, "User created successfully !!"));
   }
@@ -413,4 +413,31 @@ const sso_sign_in_token_send_google = async_handler(async (req, res) => {
 });
 
 
-export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google };
+/**
+ * 
+ * @name : insert_permissions
+ * @route : /auth/v1/insert_permissions
+ * @method_type : post
+ * @Desc : For updating user permissions in DB and RedisDB
+ * 
+ */
+
+
+const insert_permissions = async_handler(async (req: Request, res: Response) => {
+  let body = req.body;
+  let required_keys = ["api_route", "user_type", "method_type"];
+  let check_required_input = check_all_required_keys_data(body, required_keys);   // Checking whether we have got all the require inputs from request
+  if (!check_required_input.status) return res.status(400).json(new ApiError(400, "Please send all the require inputs", [{ not_exists_key: check_required_input.not_exists_keys, not_exists_value: check_required_input.not_exists_value }]));
+  let { api_route, user_type, method_type } = req.body;
+
+  await insert_user_permission({ route: api_route, user_type, method_type }); // Inserting new permisison in DB
+
+  let user_permissions = await get_user_permission();  // Getting all the permissions from DB
+
+  await set_user_permissions_redis(user_permissions); // 
+  
+  return res.status(204).json(new ApiResponse(204, {}, "User logged out successfully !!"));
+});
+
+
+export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google, insert_permissions };

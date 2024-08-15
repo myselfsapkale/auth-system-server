@@ -2,7 +2,7 @@ import { AuthCookie, UserType } from "../interfaces/auth.interface";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { get_current_UTC_time } from "../utils/common_utilites";
-import randomstring from 'randomstring';
+import Randomstring from 'randomstring';
 import { Response } from "express";
 
 
@@ -86,7 +86,7 @@ async function validate_password(db_password: string, user_password: string, tok
 
 
 const generate_otp = (): string => {
-    const otp = randomstring.generate({
+    const otp = Randomstring.generate({
         length: 6,
         charset: 'numeric', // Ensures only numbers are used
     });
@@ -103,7 +103,7 @@ const generate_otp = (): string => {
 
 
 const generate_secret = (): string => {
-    const otp = randomstring.generate({
+    const otp = Randomstring.generate({
         length: 6,
         charset: 'alphanumeric', // Includes numbers and letters (both uppercase and lowercase)
         capitalization: 'uppercase' // Ensure OTP is uppercase
