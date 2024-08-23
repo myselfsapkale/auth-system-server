@@ -105,13 +105,13 @@ async function delete_multiple_from_redis(path: string): Promise<void> {
     let cursor = '0', pattern = path;
 
     do {
-      const result = await redis_cli.scan(cursor, 'MATCH', pattern, 'COUNT', 1000);
-      cursor = result[0];
-      const keys = result[1];
-  
-      if (keys.length > 0) {
-        await redis_cli.del(keys);
-      }
+        const result = await redis_cli.scan(cursor, 'MATCH', pattern, 'COUNT', 1000);
+        cursor = result[0];
+        const keys = result[1];
+
+        if (keys.length > 0) {
+            await redis_cli.del(keys);
+        }
     } while (cursor !== '0');
 }
 
@@ -146,7 +146,7 @@ async function set_user_permissions_redis(permissions: any[]) {
     // Categorize permissions
     for (const perm of permissions) {
         const { user_type, method_type, route } = perm;
-        const method = method_type.toUpperCase();
+        const method = method_type.toLowerCase();
 
         if (categorizedPermissions[user_type] && categorizedPermissions[user_type][method]) {
             categorizedPermissions[user_type][method].push(route);
@@ -158,15 +158,27 @@ async function set_user_permissions_redis(permissions: any[]) {
         for (const method in categorizedPermissions[userType]) {
             const key = `permissions:${userType}:${method}`;
             const routes = categorizedPermissions[userType][method];
-            
+
             // Remove old permissions
             await redis_cli.del(key);
-            
+
             if (routes.length > 0) {
-                await redis_cli.sadd(key, ...routes);
+                await redis_cli.sadd(key, ...routes, );
             }
         }
     }
 }
 
-export {set_access_token_redis, get_access_token_redis, delete_from_redis, set_forgot_pass_otp_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis, get_user_permissions_redis, delete_multiple_from_redis, set_user_permissions_redis  };
+
+export {
+    set_access_token_redis,
+    get_access_token_redis,
+    delete_from_redis,
+    set_forgot_pass_otp_redis,
+    get_forgot_pass_otp_redis,
+    set_forgot_pass_secret_redis,
+    get_forgot_pass_secret_redis,
+    get_user_permissions_redis,
+    delete_multiple_from_redis,
+    set_user_permissions_redis
+};
