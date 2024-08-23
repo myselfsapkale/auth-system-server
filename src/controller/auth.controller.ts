@@ -95,6 +95,7 @@ const sign_in = async_handler(async (req: Request, res: Response) => {
   let user_details = await get_user_from_email(user_email);   // Checking whether email already exists or not
   if (user_details.length == 0) return res.status(400).json(new ApiError(400, "Email does not exists !!"));
   if (user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));
+  if (user_details[0]['provider'] !== "bus-booking") return res.status(400).json(new ApiError(400, "We already have your email registered with us from SSO !!"));
 
   let pass_check = await validate_password(user_details[0].password, password, process.env.PASSWORD_TOKEN_KEY as string);   // Validating password
   if (!pass_check) return res.status(400).json(new ApiError(400, "Password is invalid !!"));
@@ -343,6 +344,7 @@ const sso_sign_in_token_send_google = async_handler(async (req, res) => {
     let user_info = JSON.parse(JSON.stringify(user));
     let user_details = await get_user_from_email(user_info.user_email);   // Checking whether email already exists or not
     if (user_details.length && user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));  // Checking user is active or not
+    if (user_details[0].provider.toLowerCase() !== "google") return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
 
     if (user_details.length) {  // Handling for existing user
       let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
@@ -434,10 +436,29 @@ const insert_permissions = async_handler(async (req: Request, res: Response) => 
 
   let user_permissions = await get_user_permission();  // Getting all the permissions from DB
 
-  await set_user_permissions_redis(user_permissions); // 
+  await set_user_permissions_redis(user_permissions); // Setting permissions in Redis
   
-  return res.status(204).json(new ApiResponse(204, {}, "User logged out successfully !!"));
+  return res.status(204).json(new ApiResponse(204, {}, "Inserted permission successfully !!"));
 });
 
 
-export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google, insert_permissions };
+/**
+ * 
+ * @name : refresh_permissions
+ * @route : /auth/v1/refresh_permissions
+ * @method_type : get
+ * @Desc : For updating user permissions in DB and RedisDB
+ * 
+ */
+
+
+const refresh_permissions = async_handler(async (req: Request, res: Response) => {
+  let user_permissions = await get_user_permission();  // Getting all the permissions from DB
+
+  await set_user_permissions_redis(user_permissions); // Setting permissions in Redis
+  
+  return res.status(204).json(new ApiResponse(204, {}, "Refreshed permissions successfully !!"));
+});
+
+
+export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google, insert_permissions, refresh_permissions };
