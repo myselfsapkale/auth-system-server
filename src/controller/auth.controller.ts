@@ -344,7 +344,7 @@ const sso_sign_in_token_send_google = async_handler(async (req, res) => {
     let user_info = JSON.parse(JSON.stringify(user));
     let user_details = await get_user_from_email(user_info.user_email);   // Checking whether email already exists or not
     if (user_details.length && user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));  // Checking user is active or not
-    if (user_details[0].provider.toLowerCase() !== "google") return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
+    if (user_details.length && user_details[0].provider.toLowerCase() !== "google") return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
 
     if (user_details.length) {  // Handling for existing user
       let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
