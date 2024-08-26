@@ -35,7 +35,8 @@ const authenticate_request = async_handler(async (req: Request, res: Response, n
         const last_segment = segments.length > 0 ? segments[segments.length - 1] : '';
         const methodType = req.method;
 
-        let permissions = await get_user_permissions_redis(user_type, `/${last_segment}`, methodType.toLowerCase());   //  Getting users permissions from redis
+        // Authorization
+        let permissions = await get_user_permissions_redis(user_type.toLowerCase(), `/${last_segment}`, methodType.toLowerCase());   //  Getting users permissions from redis
         if(!permissions) return res.status(401).json(new ApiError(401, `You don't have permission for the feature !!`));
         
         next();

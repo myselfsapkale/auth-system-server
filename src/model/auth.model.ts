@@ -41,7 +41,7 @@ async function get_user_from_id(user_id: number): Promise<RowDataPacket[]> {
 
 async function check_phone_exists(user_phone: string): Promise<boolean> {
     const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM users WHERE user_phone = ?', [user_phone]);
-    return !!rows;
+    return rows.length > 0;
 }
 
 
