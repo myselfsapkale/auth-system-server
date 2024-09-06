@@ -3,7 +3,7 @@ import { pool } from '../db/connect_db';
 import { PoolConnection } from 'mysql2/promise';
 import { ApiResponse, ApiError } from '../utils/api_response';
 import { async_handler } from '../utils/async_handler';
-import { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user_password, insert_user_permission, get_user_permission } from '../model/auth.model';
+import { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user, insert_user_permission, get_user_permission } from '../model/auth.model';
 import { get_user_details, get_bcrypt_password, generate_token, validate_password, generate_otp, generate_secret, set_auth_cookie } from '../services/auth.service';
 import { get_current_UTC_time, check_all_required_keys_data, get_user_from_token } from '../utils/common_utilites';
 import { send_email_otp } from '../utils/nodemailer_helper';
@@ -95,7 +95,7 @@ const sign_in = async_handler(async (req: Request, res: Response) => {
   let user_details = await get_user_from_email(user_email);   // Checking whether email already exists or not
   if (user_details.length == 0) return res.status(400).json(new ApiError(400, "Email does not exists !!"));
   if (user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));
-  if (user_details[0]['provider'] !== "bus-booking") return res.status(400).json(new ApiError(400, "We already have your email registered with us from SSO !!"));
+  if (user_details[0]['is_sso'] == 1) return res.status(400).json(new ApiError(400, "We already have your email registered with us from SSO !!"));
 
   let pass_check = await validate_password(user_details[0].password, password, process.env.PASSWORD_TOKEN_KEY as string);   // Validating password
   if (!pass_check) return res.status(400).json(new ApiError(400, "Password is invalid !!"));
@@ -215,6 +215,9 @@ const sign_out_all = async_handler(async (req: Request, res: Response) => {
 
   let user_details = get_user_from_token(refresh_token, "refresh_token");    // Reading user details from given refresh token
 
+  let findRefreshToken = await get_refresh_token_id_from_refresh_token(refresh_token, user_details.user_id);   // Finding refresh token exists or not in table
+  if (findRefreshToken.length == 0) return res.status(400).json(new ApiError(400, "Refresh token does not exists !!"));
+
   await delete_all_refresh_token_of_user(user_details.user_id);   // Deleting refresh token from table
   await delete_multiple_from_redis(`${user_details.user_id}:access_tokens:*`); // For deleting all the access token regarding the user from redis
 
@@ -317,7 +320,7 @@ const change_password_with_secret = async_handler(async (req: Request, res: Resp
   let current_date_time = get_current_UTC_time();   // Getting UTC current time
   let hash_password = await get_bcrypt_password(new_password, process.env.PASSWORD_TOKEN_KEY as string)  // Here we are hashing the {user_password}
   let obj = { password: hash_password, updated_on: current_date_time }
-  await update_user_password(obj, user_details[0]['id']);   // Here we are setting new password in DB
+  await update_user(obj, user_details[0]['id']);   // Here we are setting new password in DB
 
   await delete_from_redis(`${user_details[0]['id']}:forgot_password_secret`);  // Deleting Secret from redis
 
@@ -344,7 +347,7 @@ const sso_sign_in_token_send_google = async_handler(async (req, res) => {
     let user_info = JSON.parse(JSON.stringify(user));
     let user_details = await get_user_from_email(user_info.user_email);   // Checking whether email already exists or not
     if (user_details.length && user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));  // Checking user is active or not
-    if (user_details.length && user_details[0].provider.toLowerCase() !== "google") return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
+    if (user_details.length && user_details[0]['is_sso'] == 0) return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
 
     if (user_details.length) {  // Handling for existing user
       let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
@@ -461,4 +464,36 @@ const refresh_permissions = async_handler(async (req: Request, res: Response) =>
 });
 
 
-export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google, insert_permissions, refresh_permissions };
+/**
+ * 
+ * @name : block_user
+ * @route : /auth/v1/block_user
+ * @method_type : put
+ * @Desc : For updating user status active / inactive
+ * 
+ */
+
+
+const block_user = async_handler(async (req: Request, res: Response) => {
+  let body = req.body;
+  let required_keys = ["user_email"];
+  let check_required_input = check_all_required_keys_data(body, required_keys);   // Checking whether we have got all the require inputs from request
+  if (!check_required_input.status) return res.status(400).json(new ApiError(400, "Please send all the require inputs", [{ not_exists_key: check_required_input.not_exists_keys, not_exists_value: check_required_input.not_exists_value }]));
+  let { user_email } = req.body;
+
+  let user_details = await get_user_from_email(user_email);   // Getting data on the basis of user_email
+  if (user_details.length == 0) return res.status(400).json(new ApiError(400, "Email does not exists !!"));
+  if (user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is already inactive !!"));
+
+  let current_date_time = get_current_UTC_time();   // Getting UTC current time
+
+  let obj: { is_active: 0 | 1, updated_on: string } = { is_active: 0, updated_on: current_date_time }
+  await update_user(obj, user_details[0]['id']);   // Here we are setting new password in DB
+  await delete_all_refresh_token_of_user(user_details[0]['id']);   // Deleting refresh token from table
+  await delete_multiple_from_redis(`${user_details[0]['id']}:access_tokens:*`); // For deleting all the access token regarding the user from redis
+
+  return res.status(200).json(new ApiResponse(200, { }, "User blocked successfully !!"));
+});
+
+
+export { register, sign_in, access_token_from_refresh_token, sign_out, sign_out_all, forget_password, verify_forget_password_otp, change_password_with_secret, sso_sign_in_token_send_google, insert_permissions, refresh_permissions, block_user };
