@@ -23,6 +23,7 @@ function get_user_details(body: UserType): UserType {
         user_email: body.user_email,
         user_phone: body.user_phone,
         provider: "bus-booking",
+        is_sso: 0,
         password: body.password,
         created_on: get_current_UTC_time(),
         updated_on: get_current_UTC_time(),
@@ -133,7 +134,7 @@ const set_auth_cookie = (user_id: number, user_type: string, refresh_token: stri
     res.cookie('auth-bus-ticket', JSON.stringify(cookie_value), {
         expires: expirationDate,
         path: '/',
-        // httpOnly: true,
+        httpOnly: process.env.NODE_ENV === 'production',
         secure: process.env.NODE_ENV === 'production'
     });
 }
