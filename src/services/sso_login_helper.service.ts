@@ -18,6 +18,7 @@ passport.use(new GoogleStrategy({
             user_last_name: profile?.name?.familyName,
             user_email: profile?.emails![0]?.value,
             provider: profile.provider,
+            is_sso: 1,
             is_active: 1
         };
         cb(null, user);

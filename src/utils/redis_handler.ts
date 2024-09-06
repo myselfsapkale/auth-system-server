@@ -139,8 +139,8 @@ async function get_user_permissions_redis(user_type: string, api_route: string, 
 async function set_user_permissions_redis(permissions: any[]) {
     // Create an object to hold categorized permissions
     const categorizedPermissions: any = {
-        'admin': { 'get': [], 'post': [], 'put': [], 'delete': [] },
-        'user': { 'get': [], 'post': [], 'put': [], 'delete': [] }
+        'admin': { 'get': [], 'post': [], 'put': [], 'patch': [], 'delete': [] },
+        'user': { 'get': [], 'post': [], 'put': [], 'patch': [], 'delete': [] }
     };
 
     // Categorize permissions
