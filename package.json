@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm install && rimraf dist && npx tsc && copyfiles -u 1 src/keys/**/* dist/",
-    "start": "node dist/index.js",
+    "build": "npm install && npx tsc",
+    "start": "node ./dist/index.js",
     "dev": "concurrently \"npx tsc -w\" \"nodemon --inspect dist/index.js\""
   },
   "keywords": [],
