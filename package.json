@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "yarn && npx tsc && yarn start",
+    "build": "yarn && npx tsc",
     "start": "node dist/index.js",
     "dev": "concurrently \"npx tsc -w\" \"nodemon --inspect dist/index.js\""
   },
