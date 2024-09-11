@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/api_response';
 import { async_handler } from '../utils/async_handler';
 import { get_user_from_token } from '../utils/common_utilites';
-import { get_access_token_redis, get_user_permissions_redis } from '../utils/redis_handler';
+import { get_access_token_redis, get_user_permissions_redis, get_count_of_all_permissions, set_user_permissions_redis } from '../utils/redis_handler';
+import { get_user_permission } from '../model/auth.model';
 
 
 /**
@@ -35,6 +36,12 @@ const authenticate_request = async_handler(async (req: Request, res: Response, n
         const last_segment = segments.length > 0 ? segments[segments.length - 1] : '';
         const methodType = req.method;
 
+        // Check permissions exists or not in redis
+        if(!await checkPermissionsExists()) {
+            let user_permissions = await get_user_permission();  // Getting all the permissions from DB
+            await set_user_permissions_redis(user_permissions); // Setting permissions in Redis
+        } 
+
         // Authorization
         let permissions = await get_user_permissions_redis(user_type.toLowerCase(), `/${last_segment}`, methodType.toLowerCase());   //  Getting users permissions from redis
         if(!permissions) return res.status(401).json(new ApiError(401, `You don't have permission for the feature !!`));
@@ -51,6 +58,36 @@ const authenticate_request = async_handler(async (req: Request, res: Response, n
         }
     }
 });
+
+
+/**
+ * 
+ * @name : check_permissions_exists
+ * @Desc : For authenticate user with access token
+ * 
+ */
+
+
+async function checkPermissionsExists(): Promise<boolean> {
+    const methods = ["get", "post", "put", "patch", "delete"];
+    const userTypes = ["admin", "user"];
+
+    // Function to check permissions for a single user type and method
+    const checkPermissionsForUserType = async (userType: string) => {
+        for (const method of methods) {
+            if (await get_count_of_all_permissions(userType, method)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Check permissions for all user types
+    const results = await Promise.all(userTypes.map(checkPermissionsForUserType));
+
+    // Return true if any user type has permissions
+    return results.some(hasPermission => hasPermission);
+}
 
 
 export { authenticate_request };
