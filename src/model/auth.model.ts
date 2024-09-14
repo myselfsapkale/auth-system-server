@@ -191,4 +191,33 @@ async function insert_user_permission(new_permission: { route: string, user_type
 }
 
 
-export { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user, get_user_permission, insert_user_permission };
+/**
+ * 
+ * @name : insert_logs_in_sql
+ * @Desc : For inserting logs
+ * 
+ */
+
+
+async function insert_logs_in_sql(new_log: { method_type: string, url: string, status: number, correlation_id: string, response_time: number, request_body: string, response_body: string }): Promise<number> {
+    const [rows] = await pool.query<ResultSetHeader>('INSERT INTO logs SET ?', new_log);
+    return rows.insertId;
+}
+
+
+export { 
+    get_user_from_email, 
+    get_user_from_id, 
+    check_phone_exists, 
+    insert_new_user, 
+    insert_refresh_token, 
+    insert_access_token, 
+    update_access_token, 
+    get_refresh_token_id_from_refresh_token, 
+    delete_refresh_token_from_refresh_token_id, 
+    delete_all_refresh_token_of_user, 
+    update_user, 
+    get_user_permission, 
+    insert_user_permission,
+    insert_logs_in_sql
+};

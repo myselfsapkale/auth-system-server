@@ -1,3 +1,5 @@
+import { Request } from "express";
+
 class ApiError extends Error {
     public status_code: number;
     public message: string;
@@ -9,7 +11,7 @@ class ApiError extends Error {
         statusCode: number,
         message: string = "Something went wrong",
         errors: any[] = [],
-        stack: string = ""
+        stack: string = "",
     ) {
         super();
         this.status_code = statusCode;

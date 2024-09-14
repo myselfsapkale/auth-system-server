@@ -5,8 +5,8 @@ import { ApiResponse, ApiError } from '../utils/api_response';
 import { async_handler } from '../utils/async_handler';
 import { get_user_from_email, get_user_from_id, check_phone_exists, insert_new_user, insert_refresh_token, insert_access_token, update_access_token, get_refresh_token_id_from_refresh_token, delete_refresh_token_from_refresh_token_id, delete_all_refresh_token_of_user, update_user, insert_user_permission, get_user_permission } from '../model/auth.model';
 import { get_user_details, get_bcrypt_password, generate_token, validate_password, generate_otp, generate_secret, set_auth_cookie } from '../services/auth.service';
-import { get_current_UTC_time, check_all_required_keys_data, get_user_from_token } from '../utils/common_utilites';
-import { send_email_otp } from '../utils/nodemailer_helper';
+import { get_current_UTC_time, check_all_required_keys_data, get_user_from_token } from '../services/common_helper.service';
+import { send_email_otp } from '../services/nodemailer_helper.service';
 import { set_access_token_redis, set_forgot_pass_otp_redis, delete_from_redis, delete_multiple_from_redis, get_forgot_pass_otp_redis, set_forgot_pass_secret_redis, get_forgot_pass_secret_redis, set_user_permissions_redis } from '../utils/redis_handler';
 import { passport } from '../services/sso_login_helper.service';
 import { GoogleAuthUser } from '../interfaces/auth.interface';
@@ -338,7 +338,7 @@ const change_password_with_secret = async_handler(async (req: Request, res: Resp
  */
 
 
-const sso_sign_in_token_send_google = async_handler(async (req, res) => {
+const sso_sign_in_token_send_google = async_handler(async (req: Request, res: Response) => {
   passport.authenticate('google', async (err: Error | null, user: GoogleAuthUser) => {
     if (err || !user) {
       return res.status(401).json(new ApiError(401, err?.message));
