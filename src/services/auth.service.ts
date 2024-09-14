@@ -1,7 +1,7 @@
 import { AuthCookie, UserType } from "../interfaces/auth.interface";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { get_current_UTC_time } from "../utils/common_utilites";
+import { get_current_UTC_time } from "../services/common_helper.service";
 import Randomstring from 'randomstring';
 import { Response } from "express";
 
