@@ -118,6 +118,19 @@ async function delete_multiple_from_redis(path: string): Promise<void> {
 
 /**
  * 
+ * @name : get_count_of_all_permissions
+ * @Desc : For getting all permissions on the basis of method type from redis db
+ * 
+ */
+
+
+async function get_count_of_all_permissions(user_type: string, method_type: string): Promise<number | null> {
+    return await redis_cli.scard(`permissions:${user_type}:${method_type}`);
+}
+
+
+/**
+ * 
  * @name : get_user_permissions_redis
  * @Desc : For getting user permissions from redis db
  * 
@@ -178,7 +191,8 @@ export {
     get_forgot_pass_otp_redis,
     set_forgot_pass_secret_redis,
     get_forgot_pass_secret_redis,
-    get_user_permissions_redis,
     delete_multiple_from_redis,
-    set_user_permissions_redis
+    get_user_permissions_redis,
+    set_user_permissions_redis,
+    get_count_of_all_permissions
 };

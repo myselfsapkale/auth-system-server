@@ -36,6 +36,7 @@
 // # Google SSO Environments
 // GOOGLE_CLIENT_ID=<your-google-client-id>
 // GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+// GOOGLE_CALLBACK_URL=<your-google-callback-url>
 
 
 // # Cookie Environment
