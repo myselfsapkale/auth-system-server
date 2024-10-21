@@ -245,6 +245,7 @@ const forget_password = async_handler(async (req: Request, res: Response) => {
   let user_details = await get_user_from_email(user_email as string);   // Checking whether email already exists or not
   if (user_details.length == 0) return res.status(400).json(new ApiError(400, "Email does not exists !!"));
   if (user_details[0]['is_active'] == 0) return res.status(400).json(new ApiError(400, "User is not active !!"));
+  if (user_details[0]['is_sso']) return res.status(400).json(new ApiError(400, "This is a SSO user !!"));
 
   let otp = generate_otp(); // Generating OTP
 
