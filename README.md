@@ -7,6 +7,18 @@ This project is created for learning purposes. It is a bus ticket booking applic
 Current service is AUTH service which we use to authenticate and authorize users
 
 
+## ## With Docker
+## Prerequisites
+
+1. Docker should be installed
+
+2. Install all the dependencies from root directory run this command:
+    ```bash
+    docker-compose up
+    ```
+
+
+## ## Without Docker
 ## Prerequisites
 
 - Node.js (latest version)

@@ -59,9 +59,13 @@ const register = async_handler(async (req: Request, res: Response) => {
     
     return res.status(201).json(new ApiResponse(201, { user_id: new_user_id, user_type: new_user.user_type, refresh_token: new_refresh_token, access_token: new_access_token }, "User created successfully !!"));
   }
-  catch (err) {
+  catch (err: unknown) {
     if (connection) {
       await connection.rollback();    // Rollback transaction on error
+    }
+    if (err instanceof Error) {
+      return res.status(400).json(new ApiError(400, err.message));
+    } else {
       return res.status(400).json(new ApiError(400, 'Error in registrations !!'));
     }
   }
@@ -116,9 +120,13 @@ const sign_in = async_handler(async (req: Request, res: Response) => {
     
     return res.status(200).json(new ApiResponse(200, { user_id: user_details[0].id, user_type: user_details[0].user_type, refresh_token: new_refresh_token, access_token: new_access_token }, "User authenticated successfully !!"));
   }
-  catch (error) {
+  catch (error: unknown) {
     if (connection) {
       await connection.rollback();    // Rollback transaction on error
+    }
+    if (error instanceof Error) {
+      return res.status(400).json(new ApiError(400, error.message));
+    } else {
       return res.status(400).json(new ApiError(400, 'Error in sign_in !!'));
     }
   }
@@ -367,9 +375,13 @@ const sso_sign_in_token_send_google = async_handler(async (req: Request, res: Re
         set_auth_cookie(user_details[0].id, user_details[0].user_type, new_refresh_token, new_access_token, res);  // Setting auth cookies and also sending as response
         return res.redirect(process.env.UI_ENV ? process.env.UI_ENV as string : 'http://localhost:4200/');
       }
-      catch (error) {
+      catch (error: unknown) {
         if (connection) {
           await connection.rollback();    // Rollback transaction on error
+        }
+        if (error instanceof Error) {
+          return res.status(400).json(new ApiError(400, error.message));
+        } else {
           return res.status(400).json(new ApiError(400, 'Error in sign_in !!'));
         }
       }
@@ -403,9 +415,13 @@ const sso_sign_in_token_send_google = async_handler(async (req: Request, res: Re
         set_auth_cookie(new_user_id, new_user.user_type, new_refresh_token, new_access_token, res); // Setting auth cookies and also sending as response
         return res.redirect(process.env.UI_ENV ? process.env.UI_ENV as string : 'http://localhost:4200/');
       }
-      catch (err) {
+      catch (err: unknown) {
         if (connection) {
           await connection.rollback();    // Rollback transaction on error
+        }
+        if (err instanceof Error) {
+          return res.status(400).json(new ApiError(400, err.message));
+        } else {
           return res.status(400).json(new ApiError(400, 'Error in registrations !!'));
         }
       }
