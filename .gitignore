@@ -1,5 +1,6 @@
 /dist
 /node_modules
 /.env
+/.idea
 /package-lock.json
 src/utils/app.log
