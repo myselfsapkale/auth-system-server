@@ -10,7 +10,7 @@ import { redis_cli } from '../db/connect_db';
 
 
 async function set_access_token_redis(user_id: number, access_token: string): Promise<void> {
-    await redis_cli.set(`${user_id}:access_tokens:${access_token}`, 'true', 'EX', process.env.ACCESS_REDIS_EXPIRY ? Number(process.env.ACCESS_REDIS_EXPIRY) * 3600 : 5 * 3600);
+    await redis_cli.set(`${user_id}:access_tokens:${access_token}`, 'true', 'EX', Number(process.env.ACCESS_REDIS_EXPIRY) * 60);
 }
 
 
@@ -36,7 +36,7 @@ async function get_access_token_redis(user_id: number, access_token: string): Pr
 
 
 async function set_forgot_pass_otp_redis(user_id: string, otp: string): Promise<void> {
-    await redis_cli.set(`${user_id}:forgot_password_otp`, otp, `EX`, process.env.FORGOT_PASSWORD_OTP_EXPIRE ? Number(process.env.FORGOT_PASSWORD_OTP_EXPIRE) : 120)
+    await redis_cli.set(`${user_id}:forgot_password_otp`, otp, `EX`, Number(process.env.FORGOT_PASSWORD_OTP_EXPIRE) * 60);
 }
 
 
@@ -62,7 +62,7 @@ async function get_forgot_pass_otp_redis(user_id: string): Promise<string | null
 
 
 async function set_forgot_pass_secret_redis(user_id: string, forgot_pass_secret: string): Promise<void> {
-    await redis_cli.set(`${user_id}:forgot_password_secret`, forgot_pass_secret, `EX`, process.env.FORGOT_PASSWORD_OTP_EXPIRE ? Number(process.env.FORGOT_PASSWORD_SECRET_EXPIRE) : 120);
+    await redis_cli.set(`${user_id}:forgot_password_secret`, forgot_pass_secret, `EX`, Number(process.env.FORGOT_PASSWORD_SECRET_EXPIRE) * 60);
 }
 
 

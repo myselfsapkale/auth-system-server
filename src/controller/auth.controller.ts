@@ -46,8 +46,8 @@ const register = async_handler(async (req: Request, res: Response) => {
     await connection.beginTransaction(); // Start transaction
     let new_user_id = await insert_new_user(new_user, connection);   // Here we are inserting new user in DB
 
-    let new_refresh_token = generate_token(new_user_id, new_user.user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
-    let new_access_token = generate_token(new_user_id, new_user.user_type, process.env.ACCESS_TOKEN_KEY as string, process.env.ACCESS_EXPIRY as string);    // Here generating json web token
+    let new_refresh_token = generate_token(new_user_id, new_user.user_type, process.env.REFRESH_TOKEN_KEY as string, Number(process.env.REFRESH_EXPIRY));   // Here generating json web token
+    let new_access_token = generate_token(new_user_id, new_user.user_type, process.env.ACCESS_TOKEN_KEY as string, Number(process.env.ACCESS_EXPIRY));    // Here generating json web token
 
     let current_date_time = get_current_UTC_time();   // Getting UTC current time
 
@@ -104,8 +104,8 @@ const sign_in = async_handler(async (req: Request, res: Response) => {
   let pass_check = await validate_password(user_details[0].password, password, process.env.PASSWORD_TOKEN_KEY as string);   // Validating password
   if (!pass_check) return res.status(400).json(new ApiError(400, "Password is invalid !!"));
 
-  let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
-  let new_access_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.ACCESS_TOKEN_KEY as string, process.env.ACCESS_EXPIRY as string);    // Here generating json web token
+  let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, Number(process.env.REFRESH_EXPIRY));   // Here generating json web token
+  let new_access_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.ACCESS_TOKEN_KEY as string, Number(process.env.ACCESS_EXPIRY));    // Here generating json web token
 
   let current_date_time = get_current_UTC_time();   // Getting UTC current time
 
@@ -164,7 +164,7 @@ const access_token_from_refresh_token = async_handler(async (req: Request, res: 
   let find_refresh_token = await get_refresh_token_id_from_refresh_token(refresh_token as string, user_details.user_id);   // Finding refresh token exists or not in table
   if (find_refresh_token.length == 0) return res.status(400).json(new ApiError(400, "Refresh token does not exists !!"));
 
-  let new_access_token = generate_token(user_details.user_id, user_details.user_type, process.env.ACCESS_TOKEN_KEY as string, process.env.ACCESS_EXPIRY as string);    // Here generating json web token
+  let new_access_token = generate_token(user_details.user_id, user_details.user_type, process.env.ACCESS_TOKEN_KEY as string, Number(process.env.ACCESS_EXPIRY));    // Here generating json web token
   let current_date_time = get_current_UTC_time();   // Getting UTC current time
   await update_access_token({ access_token: new_access_token, refresh_token_id: find_refresh_token[0].id, user_id: user_details.user_id, updated_on: current_date_time });    // Here we are setting access token relate to refresh_token_id in DB 
   await set_access_token_redis(user_details_db[0].id, new_access_token);  // Storing access_token in redis for user sessions
@@ -359,8 +359,8 @@ const sso_sign_in_token_send_google = async_handler(async (req: Request, res: Re
     if (user_details.length && user_details[0]['is_sso'] == 0) return res.status(400).json(new ApiError(400, "We already have your email registered with us"));
 
     if (user_details.length) {  // Handling for existing user
-      let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
-      let new_access_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.ACCESS_TOKEN_KEY as string, process.env.ACCESS_EXPIRY as string);    // Here generating json web token
+      let new_refresh_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.REFRESH_TOKEN_KEY as string, Number(process.env.REFRESH_EXPIRY));   // Here generating json web token
+      let new_access_token = generate_token(user_details[0].id, user_details[0].user_type, process.env.ACCESS_TOKEN_KEY as string, Number(process.env.ACCESS_EXPIRY));    // Here generating json web token
 
       let current_date_time = get_current_UTC_time();   // Getting UTC current time
       let connection: PoolConnection | null = null;
@@ -403,8 +403,8 @@ const sso_sign_in_token_send_google = async_handler(async (req: Request, res: Re
         new_user.updated_on = current_date_time;
         let new_user_id = await insert_new_user(new_user, connection);   // Here we are inserting new user in DB
 
-        let new_refresh_token = generate_token(new_user_id, new_user.user_type, process.env.REFRESH_TOKEN_KEY as string, process.env.REFRESH_EXPIRY as string);   // Here generating json web token
-        let new_access_token = generate_token(new_user_id, new_user.user_type, process.env.ACCESS_TOKEN_KEY as string, process.env.ACCESS_EXPIRY as string);    // Here generating json web token
+        let new_refresh_token = generate_token(new_user_id, new_user.user_type, process.env.REFRESH_TOKEN_KEY as string, Number(process.env.REFRESH_EXPIRY));   // Here generating json web token
+        let new_access_token = generate_token(new_user_id, new_user.user_type, process.env.ACCESS_TOKEN_KEY as string, Number(process.env.ACCESS_EXPIRY));    // Here generating json web token
 
         let new_refresh_token_id = await insert_refresh_token({ refresh_token: new_refresh_token, user_id: new_user_id, created_on: current_date_time, updated_on: current_date_time }, connection);   // Here we are setting refresh token in DB
         await insert_access_token({ access_token: new_access_token, refresh_token_id: new_refresh_token_id, user_id: new_user_id, created_on: current_date_time, updated_on: current_date_time }, connection);    // Here we are setting access token in DB 
