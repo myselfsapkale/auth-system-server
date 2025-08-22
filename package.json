@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "concurrently \"rimraf dist\" \"npx tsc\" \"copyfiles -u 1 src/keys/**/* dist/\"",
     "start": "node dist/index.js",
-    "dev": "concurrently \"npx tsc -w\" \"nodemon --inspect dist/index.js\""
+    "dev": "nodemon --watch src --exec ts-node src/index.ts"
   },
   "keywords": [],
   "author": "Pushpendra Sapkale",
@@ -27,7 +27,9 @@
     "passport-google-oauth20": "^2.0.0",
     "randomstring": "^1.3.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "winston": "^3.17.0",
+    "winston-transport": "^4.9.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

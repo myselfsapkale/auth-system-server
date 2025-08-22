@@ -1,4 +1,4 @@
-# Bus-Ticket-Booking
+# Auth System Server
 
 ## Description
 
@@ -14,9 +14,14 @@ Current service is AUTH service which we use to authenticate and authorize users
 
 2. Create a `.env` file and take reference from `/installation_help/env.js`.
 
-3. Install all the dependencies from root directory run this command:
+3. Install all the dependencies from root directory run this command (For Production):
     ```bash
     docker-compose up
+    ```
+
+    Install all the dependencies from root directory run this command (For Development):
+    ```bash
+    docker-compose -f docker-compose.dev.yml up
     ```
 
 
