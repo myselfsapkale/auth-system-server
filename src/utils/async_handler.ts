@@ -16,7 +16,11 @@ import logger from './elk_logger';
 const async_handler = (request_handler: RequestHandler) => {
     return (req: Request, res: Response, next: NextFunction) => {
         Promise.resolve(request_handler(req, res, next)).catch((err) => {
-            logger.error(req, err);
+            if (err instanceof Error) {
+                logger.error(req, err, 'Unhandled error in async handler');
+            } else {
+                logger.error(req, `Unhandled error in async handler: ${String(err)}`);
+            }
             res.status(500).json(new ApiError(500, 'Something went wrong !!', err))
         });
     };

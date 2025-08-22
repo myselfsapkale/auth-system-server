@@ -1,35 +1,38 @@
-version: '3.8'
 
 services:
   mysqldb:
-    image: 'mysql:lts'
+    image: 'mysql:8.0'
     container_name: "mysqldb"
     environment:
       - MYSQL_ROOT_PASSWORD=my-secret-pw
       - MYSQL_DATABASE=authdb
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmy-secret-pw"]
       timeout: 30s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 60s
+      interval: 10s
     ports:
       - "3333:3306"
     volumes:
+      - mysql_data:/var/lib/mysql
       - ./installation_help/mysqldemo.sql:/docker-entrypoint-initdb.d/mysqldemo.sql
     networks:
       - mynetwork
 
   redisdb:
-    image: 'redis:latest'
+    image: 'redis:7-alpine'
     container_name: 'redisdb'
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 30s
       timeout: 5s
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - mynetwork
 
@@ -44,51 +47,66 @@ services:
       - redisdb
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.25
     container_name: elasticsearch
-    platform: linux/amd64
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false   # disable security
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=false
+      - cluster.routing.allocation.disk.threshold_enabled=false
     ports:
       - "9200:9200"
     volumes:
-      - es-data:/usr/share/elasticsearch/data
+      - elasticsearch_data:/usr/share/elasticsearch/data
     networks:
       - mynetwork
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=30s || exit 1"]
       interval: 30s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
+      retries: 15
+      start_period: 120s
+      timeout: 30s
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.15.0
+    image: docker.elastic.co/logstash/logstash:7.17.25
     container_name: logstash
-    platform: linux/amd64
     ports:
       - "5044:5044"
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9600/_node/stats || exit 1"]
+      interval: 30s
+      retries: 15
+      start_period: 120s
+      timeout: 30s
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.15.0
+    image: docker.elastic.co/kibana/kibana:7.17.25
     container_name: kibana
-    platform: linux/amd64
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana-dev
+      - SERVER_HOST=0.0.0.0
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      retries: 15
+      start_period: 180s
+      timeout: 30s
 
   iam:
     build:
@@ -101,16 +119,14 @@ services:
         condition: service_healthy
       redisdb:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
       logstash:
-        condition: service_started
+        condition: service_healthy
       kibana:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - MYSQL_HOST=mysqldb
-      - REDIS_HOST=redisdb
       - IAM_SERVICE_URL=http://localhost:8000/
-      - ENABLE_LOGS=true   # ✅ required for Winston -> Logstash
-      - NODE_ENV=development
     ports:
       - "8000:8000"
     volumes:
@@ -121,8 +137,8 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/auth/v1/health_check"]
       interval: 30s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
       timeout: 10s
 
 networks:
@@ -130,4 +146,9 @@ networks:
     driver: bridge
 
 volumes:
-  es-data:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  elasticsearch_data:
+    driver: local

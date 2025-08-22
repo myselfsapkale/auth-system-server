@@ -40,6 +40,7 @@ class LogstashTcpTransport extends TransportStream {
 
         this.socket.on('connect', () => {
             this.connected = true;
+            console.log('DEBUG: Connected to Logstash'); // Debug
             while (this.buffer.length) {
                 this.socket.write(this.buffer.shift()!);
             }
@@ -47,11 +48,12 @@ class LogstashTcpTransport extends TransportStream {
 
         this.socket.on('error', (err: Error) => {
             this.connected = false;
-            console.error('Logstash connection error:', err.message);
+            console.log('DEBUG: Logstash connection error:', err.message); // Debug
         });
 
         this.socket.on('close', () => {
             this.connected = false;
+            console.log('DEBUG: Logstash connection closed, reconnecting...'); // Debug
             setTimeout(() => this.socket.connect(this.port, this.host), 5044);
         });
     }
@@ -60,17 +62,16 @@ class LogstashTcpTransport extends TransportStream {
         setImmediate(() => this.emit('logged', info));
 
         const logEntry = {
-            '@timestamp': info.timestamp ?? new Date().toISOString(),
             message: info.message,
-            severity: info.level.toUpperCase(),
-            host: hostname,
-            environment: process.env.NODE_ENV ?? 'development',
-            role: 'iam',
-            service: 'auth-service',
-            meta: {
-                stack: info.stack,
-                ...(typeof info.meta === 'object' && info.meta !== null ? info.meta : {}),
-            },
+            severity: (info.level || 'info').toString().toUpperCase(),
+            ip: (info.meta as any)?.ip,
+            correlation_id: (info.meta as any)?.correlation_id,
+            timestamp: new Date().toISOString(),
+            token_user_id: (info.meta as any)?.token_user_id,
+            token_user_type: (info.meta as any)?.token_user_type,
+            target_path: (info.meta as any)?.target,
+            method: (info.meta as any)?.method,
+            ...(info.stack && { stack: info.stack })
         };
 
         const json = JSON.stringify(logEntry) + '\n';
@@ -88,18 +89,41 @@ class LogstashTcpTransport extends TransportStream {
 /**
  * Extract user info and request metadata
  */
-function extractReqInfo(req?: Request): { user_email: string; correlation_id: string; target: string; ip: string } {
-    if (!req) return { user_email: 'anonymous', correlation_id: 'N/A', target: 'N/A', ip: '0.0.0.0' };
+function extractReqInfo(req?: Request): {
+    token_user_id: string;
+    token_user_type: string;
+    correlation_id: string;
+    target: string;
+    ip: string;
+    method: string;
+} {
+    if (!req) return {
+        token_user_id: 'anonymous',
+        token_user_type: 'anonymous',
+        correlation_id: 'N/A',
+        target: 'N/A',
+        ip: '0.0.0.0',
+        method: 'N/A'
+    };
 
-    const user_email = 'anonymous'; // Replace with actual user extraction if available
+    const token_user_id = req?.body?.token_user_id ?? 'anonymous';
+    const token_user_type = req?.body?.token_user_type ?? 'anonymous';
     const correlation_id = (req.headers['nonce'] as string) ?? 'N/A';
     const target = req.originalUrl ?? req.url ?? 'N/A';
+    const method = req.method ?? 'N/A';
 
     // Normalize IP
     let ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
     ip = ip.replace(/^::ffff:/, ''); // strip IPv6 prefix
 
-    return { user_email, correlation_id, target, ip };
+    return {
+        token_user_id,
+        token_user_type,
+        correlation_id,
+        target,
+        ip,
+        method
+    };
 }
 
 /**
@@ -121,29 +145,36 @@ const logger: Logger = createLogger({
 export default {
     info: (req: Request | null, message: string, meta: Record<string, unknown> = {}): void => {
         if (!process.env.ENABLE_LOGS || process.env.ENABLE_LOGS.toLowerCase() === 'false') return;
-        const { user_email, correlation_id, target, ip } = extractReqInfo(req ?? undefined);
-        logger.info(message, { meta: { ...meta, user_email, correlation_id, target, ip } });
+        const reqInfo = extractReqInfo(req ?? undefined);
+        logger.info(message, { meta: { ...meta, ...reqInfo } });
     },
 
-    error: (req: Request | null, error: Error | string, meta: Record<string, unknown> = {}): void => {
+    error: (req: Request | null, error: Error | string, message?: string): void => {
         if (!process.env.ENABLE_LOGS || process.env.ENABLE_LOGS.toLowerCase() === 'false') return;
-        const { user_email, correlation_id, target, ip } = extractReqInfo(req ?? undefined);
+        const reqInfo = extractReqInfo(req ?? undefined);
         if (error instanceof Error) {
-            logger.error(error.message, { meta: { ...meta, user_email, correlation_id, target, ip, stack: error.stack } });
+            // Create a comprehensive error message with stack trace info
+            const errorMessage = message 
+                ? `${message} - Error: ${error.message} (${error.constructor.name})`
+                : `${error.message} (${error.constructor.name})`;
+            logger.error(errorMessage, { 
+                meta: { ...reqInfo, stack: error.stack }
+            });
         } else {
-            logger.error(error, { meta: { ...meta, user_email, correlation_id, target, ip } });
+            // For string errors, use the message or the error string itself
+            logger.error(message || error, { meta: { ...reqInfo } });
         }
     },
 
     warn: (req: Request | null, message: string, meta: Record<string, unknown> = {}): void => {
         if (!process.env.ENABLE_LOGS || process.env.ENABLE_LOGS.toLowerCase() === 'false') return;
-        const { user_email, correlation_id, target, ip } = extractReqInfo(req ?? undefined);
-        logger.warn(message, { meta: { ...meta, user_email, correlation_id, target, ip } });
+        const reqInfo = extractReqInfo(req ?? undefined);
+        logger.warn(message, { meta: { ...meta, ...reqInfo } });
     },
 
     debug: (req: Request | null, message: string, meta: Record<string, unknown> = {}): void => {
         if (!process.env.ENABLE_LOGS || process.env.ENABLE_LOGS.toLowerCase() === 'false') return;
-        const { user_email, correlation_id, target, ip } = extractReqInfo(req ?? undefined);
-        logger.debug(message, { meta: { ...meta, user_email, correlation_id, target, ip } });
+        const reqInfo = extractReqInfo(req ?? undefined);
+        logger.debug(message, { meta: { ...meta, ...reqInfo } });
     },
 };

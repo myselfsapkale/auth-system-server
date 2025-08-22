@@ -49,3 +49,7 @@
 
 // # Ui Environment
 // UI_ENV="http://localhost:4200"
+
+
+// # Related to logging elastic
+// ENABLE_LOGS=true
