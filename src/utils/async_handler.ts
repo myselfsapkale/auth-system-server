@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ApiError } from './api_response';
+import logger from './elk_logger';
 
 
 /**
@@ -14,7 +15,10 @@ import { ApiError } from './api_response';
 
 const async_handler = (request_handler: RequestHandler) => {
     return (req: Request, res: Response, next: NextFunction) => {
-        Promise.resolve(request_handler(req, res, next)).catch((err) => res.status(500).json(new ApiError(500, 'Something went wrong !!', err)) );
+        Promise.resolve(request_handler(req, res, next)).catch((err) => {
+            logger.error(req, err);
+            res.status(500).json(new ApiError(500, 'Something went wrong !!', err))
+        });
     };
 };
 
