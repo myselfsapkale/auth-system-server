@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 8000;
 connect_db.then(() => {
     // Starting the Express server
     app.listen(PORT, () => {
-        console.log(`Server is running at port : ${PORT}`);
+        console.log(`Server is running at port: ${PORT}`);
     });
 }).catch((err) => {
-    console.error('MySQL or Redis db connection failed !! ', err);
+    console.error('MySQL or Redis database connection failed:', err);
 });

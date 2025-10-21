@@ -40,8 +40,9 @@ function get_user_details(body: UserType): UserType {
  */
 
 
-function generate_token(user_id: number, user_type: string, token_key: string, expires_in: string): string {
-    return jwt.sign({ user_id: user_id, user_type: user_type }, token_key, { expiresIn: expires_in });
+function generate_token(user_id: number, user_type: string, token_key: string, expires_in: number): string {
+    let expires_in_minutes = expires_in * 60;
+    return jwt.sign({ user_id: user_id, user_type: user_type }, token_key, { expiresIn: expires_in_minutes });
 }
 
 
@@ -130,7 +131,7 @@ const set_auth_cookie = (user_id: number, user_type: string, refresh_token: stri
     }
 
     const expirationDate = new Date();
-    expirationDate.setDate(expirationDate.getDate() + Number(process.env.AUTH_COOKIE_EXPIRY as unknown as number)); // Set expiration to 10 days from now
+    expirationDate.setTime(expirationDate.getTime() + Number(process.env.AUTH_COOKIE_EXPIRY) * 60 * 1000);
     res.cookie('auth-bus-ticket', JSON.stringify(cookie_value), {
         expires: expirationDate,
         path: '/',
